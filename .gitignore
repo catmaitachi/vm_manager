@@ -1,0 +1,26 @@
+# --- Binário compilado (Makefile: BIN=vm) ---
+/vm
+/vm.exe
+
+# --- Artefatos de build ---
+*.o
+*.obj
+*.exe
+*.out
+
+# --- Dados gerados (recriáveis via: cd data && python3 generate_data.py) ---
+/data/BACKING_STORE.bin
+/data/addresses_random.txt
+/data/addresses_location.txt
+
+# --- Saídas de execução / comparação ---
+saida_*.txt
+
+# --- Pasta de trabalho do Claude (planejamento, instruções, anotações) ---
+/claude/
+
+# --- Diversos (SO / editores) ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
