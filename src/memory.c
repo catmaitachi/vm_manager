@@ -42,46 +42,29 @@ static int find_free_frame(void)
 
 int handle_page_fault(int page)
 {
-    /*
-     * TODO:
-     * 1. Procurar quadro livre.
-     * 2. Se não houver quadro livre, selecionar página vítima.
-     * 3. Invalidar página vítima na tabela de páginas.
-     * 4. Remover página vítima do TLB.
-     * 5. Ler a página correta do BACKING_STORE.bin.
-     * 6. Atualizar frame_to_page.
-     * 7. Atualizar tabela de páginas.
-     * 8. Retornar número do frame.
-     */
-
-    int frame = find_free_frame();
-
-    if (frame == -1) {
-        int victim_page = select_victim_page();
-
-        /*
-         * TODO:
-         * Obter o quadro da página vítima.
-         * Invalidar tabela e TLB.
-         */
-
-        (void) victim_page;
-
-        frame = 0;
-    }
-
-    /*
-     * TODO:
-     * Fazer fseek para page * PAGE_SIZE.
-     * Fazer fread de PAGE_SIZE bytes para physical_memory[frame].
-     */
 
     if (backing == NULL) {
         fprintf(stderr, "Erro interno: BACKING_STORE nao inicializado.\n");
         exit(1);
     }
 
-    (void) page;
+    int frame = find_free_frame();
+
+    if (frame == -1) {
+
+        int victim_page = select_victim_page();
+        frame = page_table_get_frame(victim_page);
+
+        page_table_invalidate(victim_page);
+        tlb_remove(victim_page);
+
+    }
+
+    fseek(backing, page * FRAME_SIZE, SEEK_SET);
+    fread(physical_memory[frame], sizeof(signed char), FRAME_SIZE, backing);
+
+    frame_to_page[frame] = page;
+    page_table_set_frame(page, frame);
 
     return frame;
 }
@@ -99,14 +82,7 @@ int select_victim_page(void)
 
 signed char read_memory(int frame, int offset)
 {
-    /*
-     * TODO:
-     * Retornar o byte armazenado em physical_memory[frame][offset].
-     */
-
-    (void) frame;
-    (void) offset;
-    return 0;
+    return physical_memory[frame][offset];
 }
 
 int get_page_loaded_in_frame(int frame)
