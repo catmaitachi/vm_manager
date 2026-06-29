@@ -15,45 +15,27 @@ void page_table_init(void)
 
 int page_table_lookup(int page)
 {
-    /*
-     * TODO:
-     * Se a página for válida, retornar o quadro.
-     * Caso contrário, retornar -1.
-     */
-
-    (void) page;
+    if (page_table[page].valid) return page_table[page].frame;
     return -1;
 }
 
 void page_table_update(int page, int frame)
 {
-    /*
-     * TODO:
-     * Atualizar a entrada da tabela de páginas.
-     */
-
-    (void) page;
-    (void) frame;
+    page_table[page].frame = frame;
+    page_table[page].valid = 1;
+    page_table[page].reference_bit = 0;
+    page_table[page].aging_counter = 0;
 }
 
 void page_table_invalidate(int page)
 {
-    /*
-     * TODO:
-     * Invalidar a entrada da página.
-     */
-
-    (void) page;
+    page_table[page].valid = 0;
+    page_table[page].frame = -1;
 }
 
 void page_table_set_reference(int page)
 {
-    /*
-     * TODO:
-     * Marcar o bit de referência da página como 1.
-     */
-
-    (void) page;
+    page_table[page].reference_bit = 1;
 }
 
 void page_table_update_aging(void)
