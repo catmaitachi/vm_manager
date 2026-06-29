@@ -27,15 +27,9 @@ int main(void)
     while (scanf("%d", &logical_address) == 1) {
         count_address();
 
-        /*
-         * O arquivo de entrada possui inteiros de 32 bits.
-         * Apenas os 16 bits menos significativos devem ser considerados.
-         * TODO: Implementar lógica de obtenção do número da página 
-         * e do offset.
-         */
-        logical_address = 0;
-        int page = 0;
-        int offset = 0;
+        logical_address = logical_address & 0xFFFF;
+        int page = (logical_address >> 8) & 0xFF;
+        int offset = logical_address & 0xFF;
 
         int frame = tlb_lookup(page);
 
