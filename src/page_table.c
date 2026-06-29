@@ -40,26 +40,17 @@ void page_table_set_reference(int page)
 
 void page_table_update_aging(void)
 {
-    /*
-     * TODO:
-     * Implementar atualização do LRU aproximado.
-     *
-     * Para cada página válida:
-     * 1. Deslocar o contador de envelhecimento para a direita;
-     * 2. Inserir o bit de referência no bit mais significativo;
-     * 3. Zerar o bit de referência.
-     *
-     * Caso o trabalho use apenas 2 bits, adaptar a máscara do contador.
-     */
+    for (int i = 0; i < PAGE_TABLE_SIZE; i++) {
 
-    /*
-     * Exemplo conceitual para 8 bits:
-     *
-     * aging_counter >>= 1;
-     * if (reference_bit)
-     *     aging_counter |= 0x80;
-     * reference_bit = 0;
-     */
+        if (!page_table[i].valid) continue;
+
+        page_table[i].aging_counter >>= 1;
+
+        if (page_table[i].reference_bit) page_table[i].aging_counter |= 0x80;
+
+        page_table[i].reference_bit = 0;
+
+    }
 }
 
 int page_table_get_frame(int page)

@@ -64,20 +64,32 @@ int handle_page_fault(int page)
     fread(physical_memory[frame], sizeof(signed char), FRAME_SIZE, backing);
 
     frame_to_page[frame] = page;
-    page_table_set_frame(page, frame);
+    page_table_update(page, frame);
 
     return frame;
 }
 
 int select_victim_page(void)
 {
-    /*
-     * TODO:
-     * Selecionar a página válida com menor aging_counter.
-     * Em caso de empate, qualquer critério consistente pode ser usado.
-     */
+    int victim = -1;
+    unsigned char min_counter = 0;
 
-    return 0;
+    for (int frame = 0; frame < NUM_FRAMES; frame++) {
+
+        int page = frame_to_page[frame];
+        if (page == -1) continue;
+
+        unsigned char counter = page_table_get_aging_counter(page);
+
+        if (victim == -1 || counter < min_counter) {
+            victim = page;
+            min_counter = counter;
+        }
+
+    }
+
+    return victim;
+
 }
 
 signed char read_memory(int frame, int offset)
