@@ -1,3 +1,10 @@
+/**
+ * @file main.c
+ * @brief Ponto de entrada do simulador de memória virtual. Lê endereços lógicos
+ *        da entrada padrão, traduz cada um (TLB -> tabela de páginas -> page
+ *        fault), atualiza o aging e imprime o endereço físico e o byte lido.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -7,6 +14,17 @@
 #include "memory.h"
 #include "statistics.h"
 
+/**
+ * @brief Laço principal da simulação.
+ *
+ * Abre o backing store, inicializa os módulos e, para cada endereço lógico:
+ * extrai página e offset (16 bits), consulta o TLB e, em miss, a tabela de
+ * páginas, tratando page fault quando necessário; em seguida marca a referência,
+ * envelhece os contadores, calcula o endereço físico e imprime o byte. Ao final,
+ * imprime as estatísticas.
+ *
+ * @return 0 em sucesso; 1 se o BACKING_STORE.bin não puder ser aberto.
+ */
 int main(void)
 {
     FILE *backing = fopen(BACKING_STORE_PATH, "rb");
@@ -46,16 +64,9 @@ int main(void)
             tlb_insert(page, frame);
         }
 
-        /*
-         * TODO:
-         * A política de atualização do LRU aproximado pode ser ajustada.
-         * Nesta versão-base, a página acessada é marcada como referenciada
-         * e o aging é atualizado a cada acesso.
-         */
-
         page_table_set_reference(page);
         page_table_update_aging();
-        
+
         int physical_address = frame * PAGE_SIZE + offset;
         signed char value = read_memory(frame, offset);
 

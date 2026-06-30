@@ -1,3 +1,9 @@
+/**
+ * @file memory.c
+ * @brief Memória física e backing store: mantém os quadros, carrega páginas sob
+ *        demanda do BACKING_STORE.bin e implementa a substituição de páginas.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -16,6 +22,11 @@ static int frame_to_page[NUM_FRAMES];
 
 static FILE *backing = NULL;
 
+/**
+ * @brief Inicializa a memória física: zera os quadros e marca todos como livres
+ *        (frame_to_page = -1). Guarda o ponteiro do backing store já aberto.
+ * @param backing_store Arquivo BACKING_STORE.bin aberto em modo binário.
+ */
 void memory_init(FILE *backing_store)
 {
     backing = backing_store;
@@ -29,6 +40,10 @@ void memory_init(FILE *backing_store)
     }
 }
 
+/**
+ * @brief Procura o primeiro quadro livre (busca linear).
+ * @return O índice do quadro livre, ou -1 se a memória estiver cheia.
+ */
 static int find_free_frame(void)
 {
     for (int i = 0; i < NUM_FRAMES; i++) {
@@ -40,6 +55,14 @@ static int find_free_frame(void)
     return -1;
 }
 
+/**
+ * @brief Trata um page fault (paginação por demanda). Obtém um quadro livre ou,
+ *        se a memória estiver cheia, escolhe uma vítima (LRU aproximado),
+ *        invalida-a na tabela e no TLB e reaproveita seu quadro. Em seguida lê
+ *        a página pedida do backing store para o quadro e atualiza a tabela.
+ * @param page Página que causou a falta.
+ * @return O quadro onde a página foi carregada.
+ */
 int handle_page_fault(int page)
 {
 
@@ -69,6 +92,12 @@ int handle_page_fault(int page)
     return frame;
 }
 
+/**
+ * @brief Seleciona a página vítima para substituição (LRU aproximado): entre as
+ *        páginas residentes, a de menor contador de aging. Em empate, vence a
+ *        de menor índice de quadro (critério determinístico).
+ * @return A página vítima, ou -1 se não houver páginas residentes.
+ */
 int select_victim_page(void)
 {
     int victim = -1;
@@ -92,11 +121,22 @@ int select_victim_page(void)
 
 }
 
+/**
+ * @brief Lê o byte armazenado em uma posição da memória física.
+ * @param frame  Quadro físico.
+ * @param offset Deslocamento dentro do quadro (0..FRAME_SIZE-1).
+ * @return O byte (signed char) naquela posição.
+ */
 signed char read_memory(int frame, int offset)
 {
     return physical_memory[frame][offset];
 }
 
+/**
+ * @brief Informa qual página está carregada em um quadro.
+ * @param frame Quadro consultado.
+ * @return A página residente, ou -1 se o quadro estiver livre ou fora da faixa.
+ */
 int get_page_loaded_in_frame(int frame)
 {
     if (frame < 0 || frame >= NUM_FRAMES) {
