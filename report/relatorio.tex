@@ -1,0 +1,115 @@
+% =====================================================================
+%  Relatório Técnico
+% =====================================================================
+\documentclass[11pt,a4paper]{article}
+
+% ---------- Codificação e idioma ----------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+
+% ---------- Layout ----------
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+% ---------- Recursos ----------
+\usepackage{graphicx}      % figuras
+\usepackage{booktabs}      % tabelas
+\usepackage{amsmath}       % fórmulas
+\usepackage{xcolor}        % cores
+\usepackage{listings}      % código-fonte
+\usepackage[hidelinks]{hyperref}
+
+% ---------- Estilo para código C ----------
+\lstdefinestyle{c}{
+    language=C,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{teal},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    breaklines=true,
+    frame=single,
+    tabsize=4,
+    showstringspaces=false
+}
+\lstset{style=c}
+
+% ---------- Metadados ----------
+\title{Projetando um Gerenciador de Memória Virtual\\
+       \large Trabalho Prático 2 - Sistemas Operacionais}
+\author{
+    Davi Lage \\
+    Gabriel Santos \\
+    Isaías Alves \\
+    Laura Noronha \\
+    Lucas Spiazzi
+}
+\date{\today}
+
+% =====================================================================
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+% TODO: Resumir, em 5–8 linhas, o objetivo do trabalho, o que foi
+% implementado e os principais resultados obtidos.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% =====================================================================
+\section{Introdução e Fundamentação Teórica}
+\label{sec:introducao}
+% TODO: Apresentar o tema (memória virtual e tradução de endereços) e a
+% fundamentação teórica (paginação, tabela de páginas, TLB, page fault,
+% paginação por demanda e substituição de páginas por LRU/Aging). Encerrar
+% com o objetivo do trabalho e a organização do relatório.
+
+% =====================================================================
+\section{Arquitetura e Estruturas de Dados}
+\label{sec:arquitetura}
+% TODO: Descrever a arquitetura modular do simulador (papel de cada módulo
+% e a separação include/ vs src/) e as estruturas de dados utilizadas,
+% explicando a função de cada uma. Ilustrar o fluxo de tradução.
+
+% =====================================================================
+\section{Implementação e Decisões de Projeto}
+\label{sec:implementacao}
+% TODO: Descrever como cada parte foi implementada e justificar as decisões
+% de projeto: extração de página/offset, paginação por demanda, gerência de
+% quadros, substituição por LRU aproximado (Aging), coerência na expulsão,
+% TLB com FIFO, cálculo do endereço físico e estatísticas.
+
+% =====================================================================
+\section{Testes Realizados e Análise dos Resultados}
+\label{sec:resultados}
+% TODO: Descrever a metodologia de testes e apresentar/analisar os resultados
+% obtidos com os arquivos de entrada (random e location), comparando as taxas
+% de page fault e de acerto do TLB.
+
+% =====================================================================
+\section{Conclusão}
+\label{sec:conclusao}
+% TODO: Sintetizar os objetivos alcançados, as principais decisões e
+% aprendizados, e a relação entre a teoria e a implementação.
+
+% =====================================================================
+\section{Uso de Inteligência Artificial}
+\label{sec:ia}
+% TODO: Documentar como a IA foi utilizada (geração de código, explicações,
+% depuração, testes), listar TODOS os prompts empregados e discutir a
+% metodologia Spec-Driven Development (SDD).
+
+% =====================================================================
+\section*{Repositório}
+% TODO: Inserir o link do repositório público no GitHub.
+
+% =====================================================================
+% TODO: Incluir as referências bibliográficas utilizadas.
+
+\end{document}
