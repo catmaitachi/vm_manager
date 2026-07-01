@@ -30,7 +30,7 @@ vm_manager/
 Entre no diretório `data` e execute:
 
 ```bash
-python3 generate_data.py
+python generate_data.py
 ```
 
 Isso criará:
@@ -44,7 +44,7 @@ Isso criará:
 Na raiz do projeto:
 
 ```bash
-make
+mingw32-make
 ```
 
 ## Execução
@@ -58,15 +58,3 @@ ou
 ```bash
 ./vm < data/addresses_location.txt
 ```
-
-## Observação
-
-As funções principais estão propositalmente incompletas e marcadas com `TODO`.
-Vocês devem implementar a lógica de:
-
-- Tradução de endereços;
-- Tabela de páginas;
-- TLB com FIFO;
-- Tratamento de page fault;
-- Substituição de páginas com LRU aproximado;
-- Estatísticas.
