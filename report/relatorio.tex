@@ -88,7 +88,7 @@ o objetivo de simular a forma como o hardware e o sistema operacional cooperam
 para dar a um processo a ilusão de dispor de um grande espaço de memória,
 mapeando dinamicamente o espaço de endereçamento lógico na memória física (RAM).
 
-\paragraph{Fundamentação teórica.}
+\paragraph{Fundamentação teórica:}
 Na \textbf{paginação}, o espaço de endereçamento é dividido em blocos de tamanho
 fixo: as \textit{páginas}, no espaço lógico, e os \textit{quadros}, na memória
 física --- ambos com 256 bytes neste projeto. Um endereço lógico é, então,
@@ -107,7 +107,7 @@ do algoritmo LRU (\textit{Least Recently Used}) conhecida como \textbf{aging},
 que estima o uso recente de cada página por meio de um contador atualizado
 periodicamente.
 
-\paragraph{Organização do relatório.}
+\paragraph{Organização do relatório:}
 A Seção~\ref{sec:arquitetura} descreve a arquitetura modular e as estruturas de
 dados. A Seção~\ref{sec:implementacao} detalha a implementação e as decisões de
 projeto. A Seção~\ref{sec:resultados} apresenta a metodologia de testes e a
@@ -129,7 +129,7 @@ módulos e suas responsabilidades.
 \centering
 \begin{tabular}{l l p{7.2cm}}
 \toprule
-\textbf{Módulo} & \textbf{Arquivos} & \textbf{Responsabilidade} \\
+\textbf{Módulo} & \textbf{Arquivos} & \textbf{Implementação} \\
 \midrule
 Configuração      & \texttt{config.h}            & Constantes do sistema (tamanhos, quantidades e caminho do \textit{backing store}). \\
 Orquestração      & \texttt{main.c}              & Laço principal: lê os endereços e coordena TLB, tabela de páginas e tratamento de \textit{page fault}. \\
