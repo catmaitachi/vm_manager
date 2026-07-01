@@ -41,11 +41,11 @@
 \title{Projetando um Gerenciador de Memória Virtual\\
        \large Trabalho Prático 2 - Sistemas Operacionais}
 \author{
-    Davi Lage \\
-    Gabriel Santos \\
-    Isaías Alves \\
-    Laura Noronha \\
-    Lucas Spiazzi
+    Davi Lage Braga \\
+    Gabriel Santos Martins \\
+    Isaías Alves de Souza Santos \\
+    Laura Noronha Lara \\
+    Lucas Moraes Rocha Spiazzi
 }
 \date{\today}
 
@@ -54,62 +54,312 @@
 
 \maketitle
 
+\vspace{5cm}
+
 \begin{abstract}
-% TODO: Resumir, em 5–8 linhas, o objetivo do trabalho, o que foi
-% implementado e os principais resultados obtidos.
+Este trabalho apresenta o projeto e a implementação, em linguagem C, de um
+simulador de gerenciador de memória virtual que traduz endereços lógicos de
+16 bits em endereços físicos sobre um espaço de endereçamento de 65.536 bytes.
+O simulador integra os principais mecanismos do subsistema de memória: a
+extração de página e deslocamento, a tabela de páginas, o \textit{Translation
+Lookaside Buffer} (TLB) com política FIFO, a paginação por demanda a partir de
+um arquivo de retaguarda (\textit{backing store}) e a substituição de páginas
+por LRU aproximado (algoritmo de \textit{aging}). Ao final, são relatadas as
+taxas de falta de página e de acerto do TLB para dois padrões de acesso:
+aleatório e com localidade de referência, evidenciando o impacto da
+localidade sobre o desempenho da hierarquia de memória.
 \end{abstract}
 
+\newpage
 \tableofcontents
 \newpage
 
 % =====================================================================
 \section{Introdução e Fundamentação Teórica}
 \label{sec:introducao}
-% TODO: Apresentar o tema (memória virtual e tradução de endereços) e a
-% fundamentação teórica (paginação, tabela de páginas, TLB, page fault,
-% paginação por demanda e substituição de páginas por LRU/Aging). Encerrar
-% com o objetivo do trabalho e a organização do relatório.
+
+Gerenciadores de memória virtual são responsáveis por interceptar a requisição
+de um endereço lógico feita pelo processador e coordenar os demais componentes
+para localizar o dado e retornar o byte correto, gerenciando as informações
+mantidas em memória e em disco conforme a necessidade.
+
+Este trabalho consiste no projeto de um gerenciador de memória virtual em C, com
+o objetivo de simular a forma como o hardware e o sistema operacional cooperam
+para dar a um processo a ilusão de dispor de um grande espaço de memória,
+mapeando dinamicamente o espaço de endereçamento lógico na memória física (RAM).
+
+\paragraph{Fundamentação teórica.}
+Na \textbf{paginação}, o espaço de endereçamento é dividido em blocos de tamanho
+fixo: as \textit{páginas}, no espaço lógico, e os \textit{quadros}, na memória
+física --- ambos com 256 bytes neste projeto. Um endereço lógico é, então,
+interpretado como um par \textit{(número da página, deslocamento)}, em que o
+deslocamento indica a posição do byte dentro da página. A \textbf{tabela de
+páginas} armazena, para cada página, o quadro em que ela reside e se essa
+associação é válida. Como consultar a tabela a cada acesso seria custoso,
+utiliza-se o \textbf{TLB} (\textit{Translation Lookaside Buffer}), uma
+memória associativa pequena e rápida que guarda as traduções mais recentes.
+Quando uma página referenciada não está na memória física, ocorre uma
+\textbf{falta de página} (\textit{page fault}): sob \textbf{paginação por
+demanda}, a página é carregada do \textit{backing store} apenas nesse momento.
+Como a memória física é menor que o espaço lógico, eventualmente é necessário
+\textbf{substituir} uma página residente; para isso emprega-se uma aproximação
+do algoritmo LRU (\textit{Least Recently Used}) conhecida como \textbf{aging},
+que estima o uso recente de cada página por meio de um contador atualizado
+periodicamente.
+
+\paragraph{Organização do relatório.}
+A Seção~\ref{sec:arquitetura} descreve a arquitetura modular e as estruturas de
+dados. A Seção~\ref{sec:implementacao} detalha a implementação e as decisões de
+projeto. A Seção~\ref{sec:resultados} apresenta a metodologia de testes e a
+análise dos resultados. A Seção~\ref{sec:conclusao} encerra o trabalho, seguida
+da documentação do uso de inteligência artificial.
 
 % =====================================================================
 \section{Arquitetura e Estruturas de Dados}
 \label{sec:arquitetura}
-% TODO: Descrever a arquitetura modular do simulador (papel de cada módulo
-% e a separação include/ vs src/) e as estruturas de dados utilizadas,
-% explicando a função de cada uma. Ilustrar o fluxo de tradução.
+
+O projeto utiliza uma arquitetura modular, com separação entre interfaces
+(\texttt{include/*.h}) e implementações (\texttt{src/*.c}). Cada módulo possui
+uma responsabilidade única, expõe apenas as funções necessárias em seu cabeçalho
+e mantém o estado interno em variáveis \texttt{static}, aproximando-se do
+princípio de ocultação de informação. A Tabela~\ref{tab:modulos} resume os
+módulos e suas responsabilidades.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{l l p{7.2cm}}
+\toprule
+\textbf{Módulo} & \textbf{Arquivos} & \textbf{Responsabilidade} \\
+\midrule
+Configuração      & \texttt{config.h}            & Constantes do sistema (tamanhos, quantidades e caminho do \textit{backing store}). \\
+Orquestração      & \texttt{main.c}              & Laço principal: lê os endereços e coordena TLB, tabela de páginas e tratamento de \textit{page fault}. \\
+TLB               & \texttt{tlb.\{h,c\}}         & Cache das traduções mais recentes, com política de substituição FIFO. \\
+Tabela de páginas & \texttt{page\_table.\{h,c\}} & Mapeamento página\,$\rightarrow$\,quadro e metadados do LRU aproximado. \\
+Memória física    & \texttt{memory.\{h,c\}}      & Quadros, leitura do \textit{backing store}, \textit{page fault} e substituição. \\
+Estatísticas      & \texttt{statistics.\{h,c\}}  & Contadores e cálculo das taxas finais. \\
+\bottomrule
+\end{tabular}
+\caption{Módulos do simulador e suas responsabilidades.}
+\label{tab:modulos}
+\end{table}
+
+\subsection{Fluxo de tradução}
+Cada endereço lógico lido percorre as seguintes etapas:
+\begin{enumerate}
+    \item extração do número da página e do deslocamento a partir dos 16 bits
+          menos significativos do endereço;
+    \item consulta ao TLB --- em caso de acerto, o quadro é obtido diretamente;
+    \item em caso de falha no TLB, consulta à tabela de páginas --- se a entrada
+          for válida, o quadro é obtido;
+    \item se a entrada for inválida, ocorre \textit{page fault} e a página é
+          carregada do \textit{backing store} para um quadro;
+    \item inserção da tradução no TLB e atualização dos metadados de uso
+          (bit de referência e contador de \textit{aging});
+    \item cálculo do endereço físico e leitura do byte correspondente.
+\end{enumerate}
+
+\subsection{Estruturas de dados}
+As principais estruturas que sustentam o simulador são:
+\begin{itemize}
+    \item \textbf{Tabela de páginas} --- vetor de 256 entradas indexado pelo
+          número da página (acesso $O(1)$); cada entrada guarda o quadro, o bit
+          de validade, o bit de referência e o contador de \textit{aging} de
+          8 bits.
+    \item \textbf{TLB} --- vetor de 16 entradas (página, quadro e validade)
+          acompanhado de um índice circular \texttt{fifo\_next} que materializa a
+          política FIFO; a busca é linear.
+    \item \textbf{Memória física} --- matriz \texttt{physical\_memory[128][256]}
+          de bytes sinalizados (32~KiB), acompanhada do vetor
+          \texttt{frame\_to\_page[128]}, que registra qual página ocupa cada
+          quadro (o valor $-1$ indica quadro livre).
+    \item \textbf{Estatísticas} --- três contadores inteiros: total de endereços
+          traduzidos, faltas de página e acertos do TLB.
+    \item \textbf{Backing store} --- ponteiro \texttt{FILE*} para o arquivo
+          \texttt{BACKING\_STORE.bin}, tratado como arquivo de acesso aleatório.
+\end{itemize}
 
 % =====================================================================
 \section{Implementação e Decisões de Projeto}
 \label{sec:implementacao}
-% TODO: Descrever como cada parte foi implementada e justificar as decisões
-% de projeto: extração de página/offset, paginação por demanda, gerência de
-% quadros, substituição por LRU aproximado (Aging), coerência na expulsão,
-% TLB com FIFO, cálculo do endereço físico e estatísticas.
+
+Por se tratar de um projeto modularizado, adotamos um plano de ataque que
+consistiu em implementar e concluir cada componente individualmente, verificando
+as dependências entre eles antes de avançar. Seguindo a ordem sugerida no
+enunciado, partimos da tradução básica de endereços, que descarta os bits
+acima dos 16 menos significativos, passamos pela leitura do \textit{backing
+store} e pela tabela de páginas e, só então, integramos o tratamento de faltas
+de página, a substituição por LRU aproximado (\textit{aging}) e, por último, o
+TLB e as estatísticas. O projeto carrega as páginas apenas sob demanda, utiliza
+128 quadros de memória física e implementa o envelhecimento (\textit{aging})
+como aproximação do LRU. Essa progressão foi deliberada: cada camada só era
+construída sobre uma base já testada, o que manteve o código enxuto e facilitou
+localizar a origem de eventuais erros.
+
+\subsection{Como a lógica foi construída}
+Optamos por ser transparentes quanto ao processo. O projeto-base já fornecia a
+estrutura modular, os cabeçalhos, o \textit{Makefile} e, sobretudo, funções
+esqueleto acompanhadas de comentários que descreviam exatamente o que cada
+trecho pendente (marcado como \texttt{TODO}) deveria fazer. Esses comentários
+funcionaram como uma especificação: a partir deles, a lógica de cada função foi
+desenvolvida com o apoio de ferramentas de inteligência artificial, adotando a
+abordagem orientada por especificação (\textit{Spec-Driven Development}), na qual
+o problema, os requisitos e as restrições de cada trecho eram definidos com
+clareza antes de solicitar ou escrever o código. O detalhamento desse uso e os
+respectivos \textit{prompts} constam na Seção~\ref{sec:ia}.
+
+O maior esforço do grupo, porém, não foi gerar código, e sim \textbf{entender,
+integrar e validar} cada peça: interpretar os comentários do template, garantir
+que as funções conversassem corretamente entre si e confirmar, a cada etapa, que
+o comportamento observado correspondia ao esperado e de certa forma, a barreira de 
+conhecimento técnico na linguagem C foi também um fator crítico na produção do código, 
+afinal, poucos realmente eram proeficientes nessa linguagem em nosso grupo. Além disso, 
+as dificuldades em rodar o compilador dessa linguagem se provaram um grande desafio, já
+que ao contrário do Java, C possui um compilador "rústico".
+
+\subsection{Validação incremental}
+A verificação acompanhou o desenvolvimento passo a passo, e não apenas ao final.
+Após cada etapa, recompilávamos o projeto --- exigindo ausência de avisos --- e
+executávamos testes pontuais: casos pequenos em que o valor lido deveria
+coincidir com o deslocamento, um teste de estresse com mais páginas do que
+quadros disponíveis (forçando a substituição) e a execução completa sobre os
+arquivos de entrada. Os resultados desses testes são apresentados na
+Seção~\ref{sec:resultados}.
+
+\subsection{Dificuldades encontradas}
+A principal dificuldade não esteve nas funções isoladas, mas na \textbf{coerência
+entre as estruturas de dados}. Como a tabela de páginas, o vetor que associa
+quadros a páginas e o TLB descrevem, cada um à sua maneira, o mesmo estado da
+memória, qualquer atualização precisa ser refletida em todos eles. Enfrentamos,
+por exemplo, situações em que a página recém-carregada não era registrada
+corretamente em todas as estruturas, o que fazia a memória parecer sempre
+disponível e impedia o mecanismo de substituição de entrar em ação. Depurar esse
+tipo de inconsistência exigiu acompanhar o percurso de um endereço de ponta a
+ponta e reforçou a importância de manter as três visões da memória sempre
+sincronizadas --- especialmente ao expulsar uma página, momento em que ela deve
+ser invalidada tanto na tabela de páginas quanto no TLB.
 
 % =====================================================================
 \section{Testes Realizados e Análise dos Resultados}
 \label{sec:resultados}
-% TODO: Descrever a metodologia de testes e apresentar/analisar os resultados
-% obtidos com os arquivos de entrada (random e location), comparando as taxas
-% de page fault e de acerto do TLB.
+
+\subsection{Metodologia}
+A verificação foi realizada em múltiplas frentes:
+\begin{itemize}
+    \item \textbf{Compilação limpa:} o projeto compila sem avisos com as opções
+          \texttt{-Wall -Wextra}, tratando alertas do compilador como potenciais
+          defeitos.
+    \item \textbf{Correção da tradução:} como o \texttt{BACKING\_STORE.bin} é
+          gerado de modo que o byte de índice $i$ vale $i \bmod 256$, o valor
+          lido em um deslocamento deve coincidir com o próprio deslocamento;
+          casos pequenos confirmaram essa propriedade.
+    \item \textbf{Substituição sob pressão:} um teste com 256 páginas distintas
+          (o dobro dos 128 quadros) forçou sucessivas substituições; todos os
+          valores lidos permaneceram corretos, sem corrupção nem falhas de
+          execução.
+    \item \textbf{Robustez:} com entrada vazia, o programa encerra sem divisão
+          por zero, exibindo taxas nulas.
+    \item \textbf{Execução completa:} o simulador foi executado sobre os dois
+          arquivos de 10.000 endereços fornecidos.
+\end{itemize}
+
+\subsection{Resultados}
+A Tabela~\ref{tab:resultados} apresenta as estatísticas obtidas para os dois
+padrões de acesso.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{l c c c c c}
+\toprule
+\textbf{Arquivo} & \textbf{Endereços} & \textbf{Page Faults} &
+\textbf{PF Rate} & \textbf{TLB Hits} & \textbf{TLB Hit Rate} \\
+\midrule
+\texttt{addresses\_random.txt}   & 10.000 & 4.998 & 0,500 & 627   & 0,063 \\
+\texttt{addresses\_location.txt} & 10.000 & 1.031 & 0,103 & 8.021 & 0,802 \\
+\bottomrule
+\end{tabular}
+\caption{Resultados das simulações para os dois arquivos de entrada.}
+\label{tab:resultados}
+\end{table}
+
+\subsection{Análise}
+Os resultados confirmam o comportamento teórico esperado. No arquivo de acessos
+aleatórios, os endereços distribuem-se uniformemente pelas 256 páginas, de modo
+que os 128 quadros disponíveis são insuficientes e cerca de metade dos acessos
+resulta em falta de página (taxa de 0,500); o TLB, com apenas 16 entradas,
+raramente contém a página seguinte, produzindo uma taxa de acerto de somente
+0,063. Já no arquivo com localidade de referência, os acessos concentram-se em
+páginas próximas, o que permite reaproveitar tanto as páginas já residentes
+quanto as traduções armazenadas no TLB: a taxa de faltas cai para 0,103 e a taxa
+de acerto do TLB sobe para 0,802. A diferença mostra na prática o impacto do
+\textbf{princípio da localidade} sobre o desempenho da hierarquia de memória.
 
 % =====================================================================
 \section{Conclusão}
 \label{sec:conclusao}
-% TODO: Sintetizar os objetivos alcançados, as principais decisões e
-% aprendizados, e a relação entre a teoria e a implementação.
+
+Este trabalho consistiu na implementação de um simulador de gerência de memória
+virtual em C, capaz de traduzir endereços lógicos em endereços físicos. Ao longo
+do desenvolvimento, foram exercitados os mecanismos centrais do subsistema de
+memória de um sistema operacional: a decomposição do endereço lógico em número
+de página e deslocamento, a tabela de páginas como mapeamento completo, o TLB
+como cache de traduções, a paginação por demanda apoiada em uma memória de
+retaguarda e uma política de substituição baseada no LRU aproximado.
+
+Os objetivos propostos foram cumpridos: o simulador compila sem avisos, executa
+corretamente sobre os arquivos fornecidos e produz resultados coerentes com o
+comportamento esperado de um gerenciador de memória virtual, como demonstrado
+pela análise da localidade de referência na Seção~\ref{sec:resultados}. Além do
+resultado em si, o trabalho ajudou a entender melhor como os conceitos vistos na
+teoria se traduzem em estruturas de dados e algoritmos concretos, e quais
+compromissos de projeto estão por trás de cada escolha.
 
 % =====================================================================
 \section{Uso de Inteligência Artificial}
 \label{sec:ia}
-% TODO: Documentar como a IA foi utilizada (geração de código, explicações,
-% depuração, testes), listar TODOS os prompts empregados e discutir a
-% metodologia Spec-Driven Development (SDD).
+
+Esta seção descreve como usamos ferramentas de inteligência artificial durante
+o trabalho. Seguimos a abordagem orientada por especificação (\textit{Spec-Driven
+Development}): antes de pedir qualquer coisa à ferramenta, definíamos com clareza
+o problema, os requisitos e as restrições de cada tarefa. Em todas as etapas, o
+grupo revisou, integrou e validou o que foi gerado, ou seja, a IA serviu de
+apoio, não de substituta do nosso trabalho.
+
+\subsection{Contexto de utilização}
+Usamos a IA em quatro frentes: planejar o desenvolvimento a partir dos módulos
+do projeto, documentar o código-fonte com \textit{docstrings}, montar a estrutura
+inicial do relatório em LaTeX e transcrever para esse formato o conteúdo que o
+grupo redigiu, conferindo a consistência das informações.
+
+\subsection{Prompts utilizados}
+Os \textit{prompts} abaixo reproduzem, já em redação revisada, as instruções
+fornecidas à ferramenta:
+
+\begin{enumerate}
+    \item \textbf{Planejamento do desenvolvimento:} ``Elabore um plano de
+          desenvolvimento estruturado a partir dos módulos do projeto,
+          apresentando as etapas de forma didática e com instruções claras e
+          objetivas.''
+    \item \textbf{Documentação do código-fonte:} ``Documente a finalidade de
+          cada método do código-fonte por meio de \textit{docstrings} concisas
+          e, ao mesmo tempo, de fácil compreensão.''
+    \item \textbf{Estrutura do relatório:} ``Gere a estrutura inicial de um
+          relatório técnico em LaTeX no diretório \texttt{/report}.''
+    \item \textbf{Transcrição e verificação de consistência:} ``Tomando como
+          referência o documento em PDF com o conteúdo do relatório elaborado
+          pelo grupo, transcreva-o para o arquivo LaTeX, assegurando a
+          consistência e a integridade das informações.''
+\end{enumerate}
 
 % =====================================================================
 \section*{Repositório}
-% TODO: Inserir o link do repositório público no GitHub.
+\addcontentsline{toc}{section}{Repositório}
+O código-fonte completo está disponível publicamente em:\\
+\url{https://github.com/catmaitachi/vm_manager}
 
 % =====================================================================
-% TODO: Incluir as referências bibliográficas utilizadas.
+\begin{thebibliography}{9}
+\bibitem{silberschatz} SILBERSCHATZ, A.; GALVIN, P. B.; GAGNE, G.
+  \textit{Fundamentos de Sistemas Operacionais}. Rio de Janeiro: LTC.
+\end{thebibliography}
 
 \end{document}
