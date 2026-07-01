@@ -134,3 +134,4 @@ unsigned char page_table_get_aging_counter(int page)
 
     return page_table[page].aging_counter;
 }
+

@@ -85,3 +85,4 @@ void print_statistics(void)
     printf("TLB Hits = %d\n", tlb_hits);
     printf("TLB Hit Rate = %.3f\n", tlb_hit_rate);
 }
+
